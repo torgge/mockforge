@@ -9,6 +9,10 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --mac --win --linux",
     "preview": "electron-vite preview",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",

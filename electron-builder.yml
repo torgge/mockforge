@@ -1,0 +1,56 @@
+appId: com.mockforge.app
+productName: MockForge
+copyright: Copyright © 2026 MockForge Contributors
+
+directories:
+  output: dist
+
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - node_modules/better-sqlite3/**/*
+
+extraMetadata:
+  main: out/main/index.js
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: true
+  uninstallDisplayName: ${productName} ${version}
+  shortcutName: ${productName}
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Development
+  mimeTypes:
+    - application/json
+  desktop:
+    Name: MockForge
+    Comment: Generate structured mock JSON data from schemas
+    Categories: Development
