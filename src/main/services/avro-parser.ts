@@ -108,12 +108,16 @@ export class AvroParser {
     }
 
     // Primitive type
+    const enumRule =
+      resolved.enumValues && resolved.enumValues.length > 0
+        ? JSON.stringify({ kind: 'enum', values: resolved.enumValues })
+        : null
     const entry: FlatField = {
       id,
       parentFieldId,
       name,
       type: resolved.kind as FieldType,
-      rule: null,
+      rule: enumRule,
       order: result.length,
     }
     result.push(entry)
@@ -139,6 +143,18 @@ export class AvroParser {
 
       if (avroType.type === 'record') {
         return { kind: 'object', fields: avroType.fields ?? [] }
+      }
+
+      if (avroType.type === 'enum') {
+        return { kind: 'string', enumValues: Array.isArray(avroType.symbols) ? avroType.symbols : [] }
+      }
+
+      if (avroType.type === 'map') {
+        return { kind: 'object' }
+      }
+
+      if (avroType.type === 'fixed') {
+        return { kind: 'string' }
       }
     }
 
@@ -221,4 +237,5 @@ interface ResolvedType {
   kind: FieldType | 'array' | 'object'
   items?: AvroSchema
   fields?: Array<{ name: string; type: AvroSchema }>
+  enumValues?: string[]
 }
