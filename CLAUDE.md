@@ -25,7 +25,7 @@ Always read the relevant document sections before implementing. The SDD is the s
 | State | Zustand | 5.x (slices pattern) |
 | Forms | react-hook-form + Zod | latest |
 | Database | better-sqlite3 + Drizzle ORM | latest |
-| Schema import | avsc | latest |
+| Schema import | Custom Avro parser (JSON.parse) | built-in |
 | Data generation | @faker-js/faker | 9.x |
 | JSON viewer | react-json-view-lite | latest |
 | Packaging | electron-builder | latest |

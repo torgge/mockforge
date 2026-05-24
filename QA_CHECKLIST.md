@@ -222,9 +222,9 @@ Check off each item after manual or automated verification. For failed items, no
 
 ### Dead Code / Unused
 
-- [ ] `avsc` npm package is listed as a dependency but never imported anywhere — the Avro parser is custom
-- [ ] `generator.slice.ts`: `clearGeneratedData` action is never called from any page
-- [ ] `project.slice.ts`: `filteredProjects` computed method is never called (filtering is done locally in ProjectsPage)
+- [ ] `avsc` npm package is listed as a dependency but never imported anywhere — the Avro parser is custom (tracked as issue #1)
+- [ ] `generator.slice.ts`: no `clearGeneratedData` action exists; the slice uses `setGeneratedData` and `setGenerating`/`setError`
+- [ ] `project.slice.ts`: no `filteredProjects` computed method exists; filtering is done locally in `ProjectsPage`
 
 ### SDD Compliance Gaps
 
@@ -270,8 +270,8 @@ Run these after any code change:
 | 2 | Minor | Silent error catch in GeneratorPage (schema fetch, limit fetch) | `GeneratorPage.tsx:55,71` | Open |
 | 3 | Minor | `writeFileSync` in ExportService not wrapped in try/catch | `export.service.ts:17` | Open |
 | 4 | Minor | Missing confirmation dialog for Avro re-import (FR-02-3) | `SchemaEditorPage.tsx` | Open |
-| 5 | Minor | `clearGeneratedData` in generator slice is unused | `generator.slice.ts` | Open |
-| 6 | Minor | `filteredProjects` in project slice is unused | `project.slice.ts` | Open |
+| 5 | Info | `clearGeneratedData` does not exist in generator slice; slice exposes `setGeneratedData`, `setGenerating`, `setError` | `generator.slice.ts` | Corrected |
+| 6 | Info | `filteredProjects` does not exist in project slice; filtering is done inline in `ProjectsPage` | `project.slice.ts` | Corrected |
 | 7 | Minor | `FieldUpdateRulePayload.rule` Zod schema allows nullable, but `fieldRuleSchema` does not handle null explicitly (handled via `.nullable()`) | `validation.ts:65` | Open |
 | 8 | Info | All `as Field['type']` casts in schema/generator services from SQLite row deserialization are inherently unsafe but standard practice | Various | Info |
 
