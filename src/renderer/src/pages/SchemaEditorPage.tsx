@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -51,26 +51,56 @@ function FieldNode({
   field,
   allFields,
   depth,
+  focusedFieldId,
+  expandedSet,
   onEditRule,
+  onToggle,
+  onFocus,
 }: {
   field: Field
   allFields: Field[]
   depth: number
+  focusedFieldId: string | null
+  expandedSet: Set<string>
   onEditRule: (field: Field) => void
+  onToggle: (id: string) => void
+  onFocus: (id: string) => void
 }) {
-  const [expanded, setExpanded] = useState(depth < 2)
+  const rowRef = useRef<HTMLDivElement>(null)
   const hasChildren = allFields.some((f) => f.parentFieldId === field.id)
+  const isFocused = focusedFieldId === field.id
+  const expanded = expandedSet.has(field.id)
+
+  useEffect(() => {
+    if (isFocused && rowRef.current) {
+      rowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [isFocused])
 
   return (
     <div>
       <div
-        className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+        ref={rowRef}
+        role="treeitem"
+        tabIndex={0}
+        data-field-id={field.id}
+        aria-expanded={hasChildren ? expanded : undefined}
+        onClick={() => onFocus(field.id)}
+        onFocus={() => onFocus(field.id)}
+        className={`flex items-center gap-2 rounded-md px-2 py-1.5 outline-none cursor-pointer ${
+          isFocused
+            ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset'
+            : 'hover:bg-gray-50'
+        }`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {hasChildren ? (
           <button
             type="button"
-            onClick={() => setExpanded(!expanded)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle(field.id)
+            }}
             className="flex-shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-600"
           >
             {expanded ? (
@@ -92,7 +122,7 @@ function FieldNode({
           {ruleSummary(field.rule)}
         </span>
         {canHaveRule(field.type) && (
-          <Button variant="ghost" size="sm" onClick={() => onEditRule(field)}>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEditRule(field) }}>
             <Pencil className="h-3 w-3" />
           </Button>
         )}
@@ -108,7 +138,11 @@ function FieldNode({
               field={child}
               allFields={allFields}
               depth={depth + 1}
+              focusedFieldId={focusedFieldId}
+              expandedSet={expandedSet}
               onEditRule={onEditRule}
+              onToggle={onToggle}
+              onFocus={onFocus}
             />
           ))}
     </div>
@@ -299,6 +333,108 @@ export function SchemaEditorPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [showImportConfirm, setShowImportConfirm] = useState(false)
 
+  // Tree keyboard navigation state
+  const treeRef = useRef<HTMLDivElement>(null)
+  const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set())
+  const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
+
+  // Initialize expanded set when schema loads (expand depth < 2)
+  useEffect(() => {
+    if (schema && schema.fields.length > 0) {
+      const rootIds = new Set(schema.fields.filter(f => f.parentFieldId === null).map(f => f.id))
+      const toExpand = new Set<string>()
+      // Expand depth 0 and 1 by default
+      for (const field of schema.fields) {
+        if (rootIds.has(field.id)) {
+          toExpand.add(field.id)
+        } else if (field.parentFieldId && rootIds.has(field.parentFieldId)) {
+          toExpand.add(field.parentFieldId)
+        }
+      }
+      setExpandedSet(toExpand)
+      // Focus the first field on schema load
+      const firstField = schema.fields.find(f => f.parentFieldId === null)
+      if (firstField) setFocusedFieldId(firstField.id)
+    }
+  }, [schema])
+
+  // Build flat ordered list of visible fields for navigation
+  const visibleFields = useMemo(() => {
+    if (!schema) return []
+    const result: Field[] = []
+    const fieldsByParent: Record<string | 'root', Field[]> = { root: [] }
+    for (const f of schema.fields) {
+      const key = f.parentFieldId ?? 'root'
+      if (!fieldsByParent[key]) fieldsByParent[key] = []
+      fieldsByParent[key].push(f)
+    }
+    for (const key in fieldsByParent) {
+      fieldsByParent[key].sort((a, b) => a.order - b.order)
+    }
+    const walk = (parentId: string | null) => {
+      const key = parentId ?? 'root'
+      const children = fieldsByParent[key] ?? []
+      for (const child of children) {
+        result.push(child)
+        if (expandedSet.has(child.id)) {
+          walk(child.id)
+        }
+      }
+    }
+    walk(null)
+    return result
+  }, [schema, expandedSet])
+
+  const focusedIndex = visibleFields.findIndex(f => f.id === focusedFieldId)
+
+  // Keyboard handler
+  useEffect(() => {
+    const el = treeRef.current
+    if (!el) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const nextIdx = Math.min(focusedIndex + 1, visibleFields.length - 1)
+        if (nextIdx >= 0) setFocusedFieldId(visibleFields[nextIdx].id)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const prevIdx = Math.max(focusedIndex - 1, 0)
+        if (prevIdx < visibleFields.length) setFocusedFieldId(visibleFields[prevIdx].id)
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (focusedFieldId && !expandedSet.has(focusedFieldId)) {
+          setExpandedSet(prev => new Set(prev).add(focusedFieldId))
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (focusedFieldId && expandedSet.has(focusedFieldId)) {
+          const next = new Set(expandedSet)
+          next.delete(focusedFieldId)
+          setExpandedSet(next)
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        const focused = visibleFields[focusedIndex]
+        if (focused && canHaveRule(focused.type)) {
+          setEditingField(focused)
+        }
+      } else if (e.key === 'Escape') {
+        setFocusedFieldId(null)
+      }
+    }
+    el.addEventListener('keydown', handleKey)
+    return () => el.removeEventListener('keydown', handleKey)
+  }, [focusedIndex, focusedFieldId, visibleFields, expandedSet])
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedSet(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
   const project = projects.find((p) => p.id === projectId)
 
   useEffect(() => {
@@ -431,7 +567,15 @@ export function SchemaEditorPage() {
       {/* Schema loaded */}
       {!isLoading && !error && schema && (
         <div className="flex gap-6">
-          <div className="flex-1 rounded-lg border border-gray-200 bg-white p-4">
+          <div
+            ref={treeRef}
+            className="flex-1 rounded-lg border border-gray-200 bg-white p-4"
+            role="tree"
+            aria-label="Schema field tree"
+          >
+            <p className="mb-2 text-xs text-gray-400">
+              Arrow keys to navigate, Enter to edit rule
+            </p>
             {schema.fields.length === 0 ? (
               <p className="text-sm text-gray-400">No fields in schema.</p>
             ) : (
@@ -444,7 +588,11 @@ export function SchemaEditorPage() {
                     field={field}
                     allFields={schema.fields}
                     depth={0}
+                    focusedFieldId={focusedFieldId}
+                    expandedSet={expandedSet}
                     onEditRule={setEditingField}
+                    onToggle={toggleExpand}
+                    onFocus={setFocusedFieldId}
                   />
                 ))
             )}
