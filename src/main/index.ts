@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, session } from 'electron'
+import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { registerAllHandlers } from './ipc/handlers'
 import { initDatabase } from './db/client'

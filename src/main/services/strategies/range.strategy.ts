@@ -7,6 +7,11 @@ export class RangeStrategy implements GenerationStrategy {
     if (field.rule?.kind !== 'range') {
       throw new Error('RangeStrategy requires a range rule on field "' + field.name + '"')
     }
-    return faker.number.int({ min: field.rule.min, max: field.rule.max })
+    const { min, max } = field.rule
+    const isFloat = !Number.isInteger(min) || !Number.isInteger(max)
+    if (isFloat) {
+      return faker.number.float({ min, max, multipleOf: 0.01 })
+    }
+    return faker.number.int({ min, max })
   }
 }

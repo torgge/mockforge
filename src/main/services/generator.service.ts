@@ -39,8 +39,13 @@ export const GeneratorService = {
     }))
 
     const results: unknown[] = []
+    // Yield to event loop every 100 records to prevent UI freeze
+    const BATCH_SIZE = 100
     for (let i = 0; i < request.quantity; i++) {
       results.push(resolveFields(fields))
+      if (i % BATCH_SIZE === BATCH_SIZE - 1) {
+        await new Promise((resolve) => setImmediate(resolve))
+      }
     }
 
     return results
