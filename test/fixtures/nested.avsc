@@ -1,0 +1,37 @@
+{
+  "type": "record",
+  "name": "UserWithAddress",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "name", "type": "string" },
+    { "name": "email", "type": "string" },
+    { "name": "address", "type": {
+      "type": "record",
+      "name": "Address",
+      "fields": [
+        { "name": "street", "type": "string" },
+        { "name": "city", "type": "string" },
+        { "name": "zipCode", "type": "string" },
+        { "name": "country", "type": {
+          "type": "record",
+          "name": "Country",
+          "fields": [
+            { "name": "code", "type": "string" },
+            { "name": "name", "type": "string" }
+          ]
+        }}
+      ]
+    }},
+    { "name": "phoneNumbers", "type": {
+      "type": "array",
+      "items": {
+        "type": "record",
+        "name": "PhoneNumber",
+        "fields": [
+          { "name": "type", "type": "string" },
+          { "name": "number", "type": "string" }
+        ]
+      }
+    }}
+  ]
+}

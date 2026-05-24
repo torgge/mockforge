@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "UnionExample",
+  "fields": [
+    { "name": "id", "type": "string" },
+    { "name": "optionalName", "type": ["null", "string"] },
+    { "name": "score", "type": ["int", "null"] },
+    { "name": "mixedUnion", "type": ["null", "string", "int", "boolean"] },
+    { "name": "nonNullUnion", "type": ["string", "int"] },
+    { "name": "nestedUnion", "type": ["null", {
+      "type": "record",
+      "name": "UnionNested",
+      "fields": [
+        { "name": "value", "type": "string" }
+      ]
+    }]}
+  ]
+}
