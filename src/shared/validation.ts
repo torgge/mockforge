@@ -38,11 +38,16 @@ export const schemaImportAvroSchema = z.object({
   avroJson: z.string().min(1, 'Avro content is required'),
 })
 
-export const rangeRuleSchema = z.object({
+const rangeRuleBaseSchema = z.object({
   kind: z.literal('range'),
   min: z.number(),
   max: z.number(),
 })
+
+export const rangeRuleSchema = rangeRuleBaseSchema.refine(
+  (data) => data.min <= data.max,
+  { message: 'Min must be less than or equal to Max', path: ['max'] },
+)
 
 export const enumRuleSchema = z.object({
   kind: z.literal('enum'),
@@ -55,7 +60,7 @@ export const formatRuleSchema = z.object({
 })
 
 export const fieldRuleSchema = z.discriminatedUnion('kind', [
-  rangeRuleSchema,
+  rangeRuleBaseSchema,
   enumRuleSchema,
   formatRuleSchema,
 ])
