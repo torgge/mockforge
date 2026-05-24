@@ -163,6 +163,7 @@ function RuleEditor({
   const [ruleKind, setRuleKind] = useState<string>(
     field.rule?.kind ?? 'none',
   )
+  const [ruleError, setRuleError] = useState<string | null>(null)
 
   const availableKinds = [
     { kind: 'range', label: 'Range' },
@@ -171,6 +172,7 @@ function RuleEditor({
   ]
 
   const handleSave = useCallback(async () => {
+    setRuleError(null)
     if (ruleKind === 'none') {
       await onSave(null)
       return
@@ -182,18 +184,26 @@ function RuleEditor({
       const max = Number(
         (document.getElementById('range-max') as HTMLInputElement)?.value ?? 100,
       )
-      const rule: FieldRule = { kind: 'range', min, max }
-      if (validateRuleForFieldType(rule, field.type)) {
-        await onSave(rule)
+      if (min > max) {
+        setRuleError('Min must be less than or equal to Max.')
+        return
       }
+      const rule: FieldRule = { kind: 'range', min, max }
+      if (!validateRuleForFieldType(rule, field.type)) {
+        setRuleError(`A "range" rule cannot be applied to a "${field.type}" field. Only "number" fields support range rules.`)
+        return
+      }
+      await onSave(rule)
     } else if (ruleKind === 'format') {
       const subtype = (
         document.getElementById('format-subtype') as HTMLSelectElement
       )?.value as 'uuid' | 'date' | 'datetime'
       const rule: FieldRule = { kind: 'format', subtype }
-      if (validateRuleForFieldType(rule, field.type)) {
-        await onSave(rule)
+      if (!validateRuleForFieldType(rule, field.type)) {
+        setRuleError(`A "format" rule cannot be applied to a "${field.type}" field. Only "string" fields support format rules.`)
+        return
       }
+      await onSave(rule)
     } else if (ruleKind === 'enum') {
       const raw = (document.getElementById('enum-values') as HTMLInputElement)
         ?.value ?? ''
@@ -206,10 +216,16 @@ function RuleEditor({
           if (field.type === 'boolean') return s.toLowerCase() === 'true'
           return s
         })
-      const rule: FieldRule = { kind: 'enum', values }
-      if (validateRuleForFieldType(rule, field.type)) {
-        await onSave(rule)
+      if (values.length === 0) {
+        setRuleError('At least one non-blank value is required for an enum rule.')
+        return
       }
+      const rule: FieldRule = { kind: 'enum', values }
+      if (!validateRuleForFieldType(rule, field.type)) {
+        setRuleError(`An "enum" rule cannot be applied to a "${field.type}" field. Only "string", "number", and "boolean" fields support enum rules.`)
+        return
+      }
+      await onSave(rule)
     }
   }, [ruleKind, field.type, onSave])
 
@@ -229,7 +245,7 @@ function RuleEditor({
         <select
           className="mt-1 flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm"
           value={ruleKind}
-          onChange={(e) => setRuleKind(e.target.value)}
+          onChange={(e) => { setRuleKind(e.target.value); setRuleError(null) }}
         >
           <option value="none">No rule</option>
           {availableKinds.map((ak) => (
@@ -296,6 +312,12 @@ function RuleEditor({
             className="mt-1"
           />
         </div>
+      )}
+
+      {ruleError && (
+        <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {ruleError}
+        </p>
       )}
 
       <div className="flex justify-end gap-2">
