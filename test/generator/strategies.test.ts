@@ -72,7 +72,7 @@ describe("FormatStrategy", () => {
       rule: { kind: "format", subtype: "uuid" },
     })
     const value = strategy.generate(field) as string
-    expect(value).toMatch
+    expect(value).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it("generates YYYY-MM-DD for date subtype", () => {
