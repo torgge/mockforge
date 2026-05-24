@@ -47,7 +47,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-  // Content Security Policy
+  // Content Security Policy — relaxed in dev for Vite HMR
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const isDev = !app.isPackaged
     const csp = isDev
