@@ -2,7 +2,9 @@ import { ipcMain } from 'electron'
 import { IPC_CHANNELS } from '@shared/ipc.channels'
 import { ProjectService } from '../services/project.service'
 import { SchemaService } from '../services/schema.service'
-import { stubs } from './stubs'
+import { GeneratorService } from '../services/generator.service'
+import { ExportService } from '../services/export.service'
+import { SettingsService } from '../services/settings.service'
 import {
   projectCreateSchema,
   projectUpdateSchema,
@@ -11,6 +13,10 @@ import {
   schemaGetByProjectSchema,
   schemaImportAvroSchema,
   fieldUpdateRuleSchema,
+  generateRequestSchema,
+  exportToFileSchema,
+  settingsGetSchema,
+  settingsSetSchema,
 } from '@shared/validation'
 
 function wrapHandler<T>(fn: (...args: unknown[]) => Promise<T>) {
@@ -94,21 +100,41 @@ export function registerAllHandlers(): void {
     }),
   )
 
-  // ── Generator/Export/Settings: still stubs ──
+  // ── Generator channel ──
 
-  ipcMain.handle(IPC_CHANNELS.GENERATOR_RUN, (_event, payload) => {
-    return stubs.generator.run(payload)
-  })
+  ipcMain.handle(
+    IPC_CHANNELS.GENERATOR_RUN,
+    wrapHandler(async (payload) => {
+      const parsed = generateRequestSchema.parse(payload)
+      return GeneratorService.run(parsed)
+    }),
+  )
 
-  ipcMain.handle(IPC_CHANNELS.EXPORT_TO_FILE, (_event, payload) => {
-    return stubs.export.toFile(payload)
-  })
+  // ── Export channel ──
 
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, (_event, payload) => {
-    return stubs.settings.get(payload)
-  })
+  ipcMain.handle(
+    IPC_CHANNELS.EXPORT_TO_FILE,
+    wrapHandler(async (payload) => {
+      const parsed = exportToFileSchema.parse(payload)
+      return ExportService.toFile(parsed)
+    }),
+  )
 
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_SET, (_event, payload) => {
-    return stubs.settings.set(payload)
-  })
+  // ── Settings channels ──
+
+  ipcMain.handle(
+    IPC_CHANNELS.SETTINGS_GET,
+    wrapHandler(async (payload) => {
+      const parsed = settingsGetSchema.parse(payload)
+      return SettingsService.get(parsed.key)
+    }),
+  )
+
+  ipcMain.handle(
+    IPC_CHANNELS.SETTINGS_SET,
+    wrapHandler(async (payload) => {
+      const parsed = settingsSetSchema.parse(payload)
+      return SettingsService.set(parsed.key, parsed.value)
+    }),
+  )
 }

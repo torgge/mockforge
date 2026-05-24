@@ -1,0 +1,210 @@
+import { describe, it, expect } from "vitest"
+import { RangeStrategy } from "../../src/main/services/strategies/range.strategy"
+import { EnumStrategy } from "../../src/main/services/strategies/enum.strategy"
+import { FormatStrategy } from "../../src/main/services/strategies/format.strategy"
+import { DefaultStrategy } from "../../src/main/services/strategies/default.strategy"
+import { getStrategy } from "../../src/main/services/strategies"
+import type { Field } from "@shared/ipc.types"
+
+function makeField(overrides: Partial<Field>): Field {
+  return {
+    id: "test-id",
+    schemaId: "test-schema",
+    parentFieldId: null,
+    name: "testField",
+    type: "string",
+    rule: null,
+    order: 0,
+    ...overrides,
+  }
+}
+
+describe("RangeStrategy", () => {
+  it("generates a number within the specified range", () => {
+    const strategy = new RangeStrategy()
+    const field = makeField({
+      type: "number",
+      rule: { kind: "range", min: 10, max: 20 },
+    })
+    for (let i = 0; i < 100; i++) {
+      const value = strategy.generate(field)
+      expect(typeof value).toBe("number")
+      expect(value).toBeGreaterThanOrEqual(10)
+      expect(value).toBeLessThanOrEqual(20)
+    }
+  })
+
+  it("throws for non-range rule", () => {
+    const strategy = new RangeStrategy()
+    const field = makeField({
+      rule: { kind: "enum", values: ["a", "b"] },
+    })
+    expect(() => strategy.generate(field)).toThrow()
+  })
+})
+
+describe("EnumStrategy", () => {
+  it("picks a value from the enum", () => {
+    const strategy = new EnumStrategy()
+    const values = ["red", "green", "blue"]
+    const field = makeField({
+      rule: { kind: "enum", values },
+    })
+    for (let i = 0; i < 50; i++) {
+      const value = strategy.generate(field)
+      expect(values).toContain(value)
+    }
+  })
+
+  it("throws for non-enum rule", () => {
+    const strategy = new EnumStrategy()
+    const field = makeField({
+      rule: { kind: "range", min: 1, max: 5 },
+    })
+    expect(() => strategy.generate(field)).toThrow()
+  })
+})
+
+describe("FormatStrategy", () => {
+  it("generates a UUID for uuid subtype", () => {
+    const strategy = new FormatStrategy()
+    const field = makeField({
+      rule: { kind: "format", subtype: "uuid" },
+    })
+    const value = strategy.generate(field) as string
+    expect(value).toMatch
+  })
+
+  it("generates YYYY-MM-DD for date subtype", () => {
+    const strategy = new FormatStrategy()
+    const field = makeField({
+      rule: { kind: "format", subtype: "date" },
+    })
+    const value = strategy.generate(field) as string
+    expect(value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it("generates ISO string for datetime subtype", () => {
+    const strategy = new FormatStrategy()
+    const field = makeField({
+      rule: { kind: "format", subtype: "datetime" },
+    })
+    const value = strategy.generate(field) as string
+    expect(value).toContain("T")
+  })
+
+  it("throws for non-format rule", () => {
+    const strategy = new FormatStrategy()
+    const field = makeField({
+      type: "string",
+      rule: { kind: "enum", values: ["x"] },
+    })
+    expect(() => strategy.generate(field)).toThrow()
+  })
+})
+
+describe("DefaultStrategy", () => {
+  it("generates a string for string type without rule", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "string" })
+    const value = strategy.generate(field)
+    expect(typeof value).toBe("string")
+  })
+
+  it("generates a number for number type", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "number" })
+    const value = strategy.generate(field)
+    expect(typeof value).toBe("number")
+  })
+
+  it("generates a boolean for boolean type", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "boolean" })
+    const value = strategy.generate(field)
+    expect(typeof value).toBe("boolean")
+  })
+
+  it("returns empty object for object type", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "object" })
+    const value = strategy.generate(field)
+    expect(value).toEqual({})
+  })
+
+  it("returns empty array for array type", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "array" })
+    const value = strategy.generate(field)
+    expect(value).toEqual([])
+  })
+
+  it("returns null for null type", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "null" })
+    const value = strategy.generate(field)
+    expect(value).toBeNull()
+  })
+
+  it("generates email for field named email", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "string", name: "email" })
+    const value = strategy.generate(field) as string
+    expect(value).toContain("@")
+  })
+
+  it("generates UUID for field named id", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "string", name: "id" })
+    const value = strategy.generate(field) as string
+    expect(value.length).toBeGreaterThan(10)
+  })
+
+  it("uses name heuristic for firstName", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({ type: "string", name: "firstName" })
+    const value = strategy.generate(field)
+    expect(typeof value).toBe("string")
+    expect(value.length).toBeGreaterThan(0)
+  })
+
+  it("throws if field has a rule", () => {
+    const strategy = new DefaultStrategy()
+    const field = makeField({
+      rule: { kind: "range", min: 1, max: 10 },
+    })
+    expect(() => strategy.generate(field)).toThrow()
+  })
+})
+
+describe("getStrategy factory", () => {
+  it("returns RangeStrategy for range rules", () => {
+    const field = makeField({
+      rule: { kind: "range", min: 1, max: 5 },
+    })
+    const strategy = getStrategy(field)
+    expect(strategy).toBeInstanceOf(RangeStrategy)
+  })
+
+  it("returns EnumStrategy for enum rules", () => {
+    const field = makeField({
+      rule: { kind: "enum", values: ["a", "b"] },
+    })
+    const strategy = getStrategy(field)
+    expect(strategy).toBeInstanceOf(EnumStrategy)
+  })
+
+  it("returns FormatStrategy for format rules", () => {
+    const field = makeField({
+      rule: { kind: "format", subtype: "uuid" },
+    })
+    const strategy = getStrategy(field)
+    expect(strategy).toBeInstanceOf(FormatStrategy)
+  })
+
+  it("returns DefaultStrategy when no rule is set", () => {
+    const field = makeField({})
+    const strategy = getStrategy(field)
+    expect(strategy).toBeInstanceOf(DefaultStrategy)
+  })
+})
