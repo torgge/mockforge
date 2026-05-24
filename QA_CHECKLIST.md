@@ -236,9 +236,9 @@ Check off each item after manual or automated verification. For failed items, no
 
 Run these after any code change:
 
-- [ ] `npm run typecheck` — passes with zero errors
-- [ ] `npm test` — all tests pass
-- [ ] `npm run build` — builds without errors
+- [x] `npm run typecheck` — passes with zero errors
+- [x] `npm test` — all tests pass (83/83)
+- [x] `npm run build` — builds without errors
 - [ ] Manual: Create project -> Import Avro -> Set rules -> Generate -> Copy -> Export -> Delete project
 - [ ] Manual: Change max limit in settings -> Verify applies to generator page -> Restart app -> Verify persists
 
@@ -266,14 +266,16 @@ Run these after any code change:
 
 | # | Severity | Description | File | Status |
 |---|---|---|---|---|
-| 1 | Minor | `avsc` npm package declared but unused; custom AvroParser implemented instead | `package.json` | Open |
-| 2 | Minor | Silent error catch in GeneratorPage (schema fetch, limit fetch) | `GeneratorPage.tsx:55,71` | Open |
-| 3 | Minor | `writeFileSync` in ExportService not wrapped in try/catch | `export.service.ts:17` | Open |
+| 1 | Minor | `avsc` npm package declared but unused; custom AvroParser implemented instead | `package.json` | **Resolved** — `avsc` removed from `package.json` |
+| 2 | Minor | Silent error catch in GeneratorPage (schema fetch, limit fetch) | `GeneratorPage.tsx:55,71` | **Resolved** — catches now call `setWarning`/`setError` |
+| 3 | Minor | `writeFileSync` in ExportService not wrapped in try/catch | `export.service.ts:17` | **Resolved** — wrapped in try/catch, re-throws with message |
 | 4 | Minor | Missing confirmation dialog for Avro re-import (FR-02-3) | `SchemaEditorPage.tsx` | Open |
 | 5 | Info | `clearGeneratedData` does not exist in generator slice; slice exposes `setGeneratedData`, `setGenerating`, `setError` | `generator.slice.ts` | Corrected |
 | 6 | Info | `filteredProjects` does not exist in project slice; filtering is done inline in `ProjectsPage` | `project.slice.ts` | Corrected |
 | 7 | Minor | `FieldUpdateRulePayload.rule` Zod schema allows nullable, but `fieldRuleSchema` does not handle null explicitly (handled via `.nullable()`) | `validation.ts:65` | Open |
 | 8 | Info | All `as Field['type']` casts in schema/generator services from SQLite row deserialization are inherently unsafe but standard practice | Various | Info |
+| 9 | Minor | Form labels in RuleEditor lack `htmlFor` attributes — `<Label>Min</Label>`, `<Label>Max</Label>`, `<Label>Subtype</Label>`, `<Label>Values</Label>`, `<Label>Rule kind</Label>` have no `htmlFor` pointing to their input IDs; clicking the label does not focus the input and screen readers cannot associate them | `SchemaEditorPage.tsx:244,262,271,284,303` | **Resolved** — `htmlFor` adicionado em todos os `<Label>` e `id="rule-kind"` adicionado ao select |
+| 10 | Minor | Rule form reads input values via `document.getElementById()` with unsafe `as HTMLInputElement`/`as HTMLSelectElement` casts instead of React refs or controlled inputs — brittle and a React anti-pattern | `SchemaEditorPage.tsx:182,185,199,208` | **Resolved** — substituído por `useState` controlado (`rangeMin`, `rangeMax`, `formatSubtype`, `enumValues`) |
 
 ---
 

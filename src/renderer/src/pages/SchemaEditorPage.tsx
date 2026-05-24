@@ -164,6 +164,18 @@ function RuleEditor({
     field.rule?.kind ?? 'none',
   )
   const [ruleError, setRuleError] = useState<string | null>(null)
+  const [rangeMin, setRangeMin] = useState<number>(
+    field.rule?.kind === 'range' ? field.rule.min : 0,
+  )
+  const [rangeMax, setRangeMax] = useState<number>(
+    field.rule?.kind === 'range' ? field.rule.max : 100,
+  )
+  const [formatSubtype, setFormatSubtype] = useState<'uuid' | 'date' | 'datetime'>(
+    field.rule?.kind === 'format' ? field.rule.subtype : 'uuid',
+  )
+  const [enumValues, setEnumValues] = useState<string>(
+    field.rule?.kind === 'enum' ? field.rule.values.join(', ') : '',
+  )
 
   const availableKinds = [
     { kind: 'range', label: 'Range' },
@@ -178,36 +190,25 @@ function RuleEditor({
       return
     }
     if (ruleKind === 'range') {
-      const min = Number(
-        (document.getElementById('range-min') as HTMLInputElement)?.value ?? 0,
-      )
-      const max = Number(
-        (document.getElementById('range-max') as HTMLInputElement)?.value ?? 100,
-      )
-      if (min > max) {
+      if (rangeMin > rangeMax) {
         setRuleError('Min must be less than or equal to Max.')
         return
       }
-      const rule: FieldRule = { kind: 'range', min, max }
+      const rule: FieldRule = { kind: 'range', min: rangeMin, max: rangeMax }
       if (!validateRuleForFieldType(rule, field.type)) {
         setRuleError(`A "range" rule cannot be applied to a "${field.type}" field. Only "number" fields support range rules.`)
         return
       }
       await onSave(rule)
     } else if (ruleKind === 'format') {
-      const subtype = (
-        document.getElementById('format-subtype') as HTMLSelectElement
-      )?.value as 'uuid' | 'date' | 'datetime'
-      const rule: FieldRule = { kind: 'format', subtype }
+      const rule: FieldRule = { kind: 'format', subtype: formatSubtype }
       if (!validateRuleForFieldType(rule, field.type)) {
         setRuleError(`A "format" rule cannot be applied to a "${field.type}" field. Only "string" fields support format rules.`)
         return
       }
       await onSave(rule)
     } else if (ruleKind === 'enum') {
-      const raw = (document.getElementById('enum-values') as HTMLInputElement)
-        ?.value ?? ''
-      const values = raw
+      const values = enumValues
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s.length > 0)
@@ -227,7 +228,7 @@ function RuleEditor({
       }
       await onSave(rule)
     }
-  }, [ruleKind, field.type, onSave])
+  }, [ruleKind, rangeMin, rangeMax, formatSubtype, enumValues, field.type, onSave])
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -241,8 +242,9 @@ function RuleEditor({
       </div>
 
       <div className="mb-3">
-        <Label>Rule kind</Label>
+        <Label htmlFor="rule-kind">Rule kind</Label>
         <select
+          id="rule-kind"
           className="mt-1 flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm"
           value={ruleKind}
           onChange={(e) => { setRuleKind(e.target.value); setRuleError(null) }}
@@ -259,20 +261,22 @@ function RuleEditor({
       {ruleKind === 'range' && (
         <div className="mb-3 grid grid-cols-2 gap-2">
           <div>
-            <Label>Min</Label>
+            <Label htmlFor="range-min">Min</Label>
             <Input
               id="range-min"
               type="number"
-              defaultValue={field.rule?.kind === 'range' ? field.rule.min : 0}
+              value={rangeMin}
+              onChange={(e) => setRangeMin(Number(e.target.value))}
               className="mt-1"
             />
           </div>
           <div>
-            <Label>Max</Label>
+            <Label htmlFor="range-max">Max</Label>
             <Input
               id="range-max"
               type="number"
-              defaultValue={field.rule?.kind === 'range' ? field.rule.max : 100}
+              value={rangeMax}
+              onChange={(e) => setRangeMax(Number(e.target.value))}
               className="mt-1"
             />
           </div>
@@ -281,15 +285,12 @@ function RuleEditor({
 
       {ruleKind === 'format' && (
         <div className="mb-3">
-          <Label>Subtype</Label>
+          <Label htmlFor="format-subtype">Subtype</Label>
           <select
             id="format-subtype"
             className="mt-1 flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm"
-            defaultValue={
-              field.rule?.kind === 'format'
-                ? field.rule.subtype
-                : 'uuid'
-            }
+            value={formatSubtype}
+            onChange={(e) => setFormatSubtype(e.target.value as 'uuid' | 'date' | 'datetime')}
           >
             <option value="uuid">UUID</option>
             <option value="date">Date</option>
@@ -300,15 +301,12 @@ function RuleEditor({
 
       {ruleKind === 'enum' && (
         <div className="mb-3">
-          <Label>Values (comma-separated)</Label>
+          <Label htmlFor="enum-values">Values (comma-separated)</Label>
           <Input
             id="enum-values"
             placeholder="value1, value2, value3"
-            defaultValue={
-              field.rule?.kind === 'enum'
-                ? field.rule.values.join(', ')
-                : ''
-            }
+            value={enumValues}
+            onChange={(e) => setEnumValues(e.target.value)}
             className="mt-1"
           />
         </div>
