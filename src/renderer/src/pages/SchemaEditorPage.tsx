@@ -297,6 +297,7 @@ export function SchemaEditorPage() {
   const [importAvroJson, setImportAvroJson] = useState('')
   const [importError, setImportError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [showImportConfirm, setShowImportConfirm] = useState(false)
 
   const project = projects.find((p) => p.id === projectId)
 
@@ -339,6 +340,16 @@ export function SchemaEditorPage() {
     },
     [editingField, updateField, setError],
   )
+
+  const handleImportClick = async () => {
+    if (!projectId || !importAvroJson.trim()) return
+    // If schema has existing fields, show confirmation first
+    if (schema && schema.fields.length > 0 && !showImportConfirm) {
+      setShowImportConfirm(true)
+      return
+    }
+    await handleImportAvro()
+  }
 
   const handleImportAvro = async () => {
     if (!projectId || !importAvroJson.trim()) return
@@ -473,52 +484,93 @@ export function SchemaEditorPage() {
       {/* Import Avro Dialog */}
       <Dialog
         open={importOpen}
-        onOpenChange={setImportOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open)
+          if (!open) {
+            setShowImportConfirm(false)
+            setImportAvroJson('')
+            setImportError(null)
+          }
+        }}
         title="Import Avro Schema"
       >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="avro-json">Paste Avro JSON schema</Label>
-            <textarea
-              id="avro-json"
-              className="flex min-h-[200px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-400"
-              placeholder='{"type": "record", "name": "User", "fields": [...]}'
-              value={importAvroJson}
-              onChange={(e) => setImportAvroJson(e.target.value)}
-            />
-          </div>
-          {importError && (
-            <p className="text-xs text-red-500">{importError}</p>
-          )}
-          <p className="text-xs text-gray-400">
-            Existing fields will be replaced with the imported schema.
-          </p>
-        </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setImportOpen(false)
-              setImportAvroJson('')
-              setImportError(null)
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleImportAvro}
-            disabled={isImporting || !importAvroJson.trim()}
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              'Import'
-            )}
-          </Button>
-        </div>
+        {showImportConfirm ? (
+          <>
+            <p className="text-sm text-gray-700">
+              This project already has {schema?.fields.length ?? 0} field
+              {schema?.fields.length === 1 ? '' : 's'}. Importing will replace
+              all existing fields and their rules.
+            </p>
+            <p className="mt-2 text-sm font-medium text-red-600">
+              This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowImportConfirm(false)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleImportAvro}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Replacing...
+                  </>
+                ) : (
+                  'Replace All Fields'
+                )}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="avro-json">Paste Avro JSON schema</Label>
+                <textarea
+                  id="avro-json"
+                  className="flex min-h-[200px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-400"
+                  placeholder='{"type": "record", "name": "User", "fields": [...]}'
+                  value={importAvroJson}
+                  onChange={(e) => setImportAvroJson(e.target.value)}
+                />
+              </div>
+              {importError && (
+                <p className="text-xs text-red-500">{importError}</p>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportOpen(false)
+                  setImportAvroJson('')
+                  setImportError(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImportClick}
+                disabled={isImporting || !importAvroJson.trim()}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  'Import'
+                )}
+              </Button>
+            </div>
+          </>
+        )}
       </Dialog>
     </div>
   )

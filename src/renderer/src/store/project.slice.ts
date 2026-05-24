@@ -14,11 +14,9 @@ interface ProjectState {
   setSearchQuery: (query: string) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-
-  filteredProjects: () => Project[]
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set) => ({
   projects: [],
   searchQuery: '',
   isLoading: false,
@@ -44,11 +42,4 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
 
   setError: (error) => set({ error }),
-
-  filteredProjects: () => {
-    const { projects, searchQuery } = get()
-    if (!searchQuery) return projects
-    const q = searchQuery.toLowerCase()
-    return projects.filter((p) => p.name.toLowerCase().includes(q))
-  },
 }))

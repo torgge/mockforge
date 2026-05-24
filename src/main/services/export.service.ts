@@ -14,7 +14,12 @@ export const ExportService = {
 
     if (canceled || !filePath) return null
 
-    writeFileSync(filePath, JSON.stringify(payload.data, null, 2), 'utf-8')
-    return { filePath }
+    try {
+      writeFileSync(filePath, JSON.stringify(payload.data, null, 2), 'utf-8')
+      return { filePath }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to write file'
+      throw new Error(`Export failed: ${message}`)
+    }
   },
 }

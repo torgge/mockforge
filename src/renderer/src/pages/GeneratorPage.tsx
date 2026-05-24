@@ -37,6 +37,7 @@ export function GeneratorPage() {
   } = useGeneratorStore()
 
   const [copied, setCopied] = useState(false)
+  const [warning, setWarning] = useState<string | null>(null)
 
   const project = projects.find((p) => p.id === projectId)
 
@@ -50,8 +51,10 @@ export function GeneratorPage() {
         if (result !== null) {
           setMaxGenerationLimit(Number(result))
         }
-      } catch {
-        // Use default
+      } catch (err) {
+        setWarning(
+          err instanceof Error ? err.message : 'Failed to load settings, using default limit',
+        )
       }
     }
     fetchLimit()
@@ -67,8 +70,10 @@ export function GeneratorPage() {
           projectId,
         })
         setSchema(result)
-      } catch {
-        // ignore
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to load schema',
+        )
       } finally {
         setSchemaLoading(false)
       }
@@ -246,6 +251,14 @@ export function GeneratorPage() {
               Generating more than 1,000 records may take a moment.
             </div>
           )}
+        </div>
+      )}
+
+      {/* Warning */}
+      {warning && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-700">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          {warning}
         </div>
       )}
 

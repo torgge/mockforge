@@ -10,7 +10,6 @@ interface GeneratorState {
   setGeneratedData: (data: unknown[]) => void
   setQuantity: (quantity: number) => void
   setMaxGenerationLimit: (limit: number) => void
-  clearGeneratedData: () => void
   setGenerating: (generating: boolean) => void
   setError: (error: string | null) => void
 }
@@ -27,8 +26,6 @@ export const useGeneratorStore = create<GeneratorState>((set) => ({
   setQuantity: (quantity) => set({ quantity }),
 
   setMaxGenerationLimit: (limit) => set({ maxGenerationLimit: limit }),
-
-  clearGeneratedData: () => set({ generatedData: null }),
 
   setGenerating: (generating) => set({ isGenerating: generating }),
 
