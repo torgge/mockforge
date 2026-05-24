@@ -18,14 +18,13 @@ export function resolveFields(
     if (field.type === 'object') {
       obj[field.name] = resolveFields(fields, field.id)
     } else if (field.type === 'array') {
-      const count = faker.number.int({ min: 1, max: 5 })
       const children = fields.filter((f) => f.parentFieldId === field.id)
-      obj[field.name] = Array.from({ length: count }, () => {
-        if (children.length > 0) {
-          return resolveFields(fields, field.id)
-        }
-        return strategy.generate(field)
-      })
+      if (children.length === 0) {
+        obj[field.name] = []
+      } else {
+        const count = faker.number.int({ min: 1, max: 5 })
+        obj[field.name] = Array.from({ length: count }, () => resolveFields(fields, field.id))
+      }
     } else {
       obj[field.name] = strategy.generate(field)
     }

@@ -76,6 +76,16 @@ describe("resolveFields", () => {
     expect(typeof l5.value).toBe("string")
   })
 
+  it("handles array with no children (returns empty array)", () => {
+    const fields: Field[] = [
+      f({ id: "f1", parentFieldId: null, name: "tags", type: "array", order: 0 }),
+    ]
+    const result = resolveFields(fields)
+    expect(result).toHaveProperty("tags")
+    expect(Array.isArray(result.tags)).toBe(true)
+    expect(result.tags).toEqual([])
+  })
+
   it("handles object with no children", () => {
     const fields: Field[] = [
       f({ id: "f1", parentFieldId: null, name: "emptyObj", type: "object", order: 0 }),
