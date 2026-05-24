@@ -49,12 +49,14 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   // Content Security Policy
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const isDev = !app.isPackaged
+    const csp = isDev
+      ? "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws:"
+      : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'",
-        ],
+        'Content-Security-Policy': [csp],
       },
     })
   })
