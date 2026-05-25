@@ -22,6 +22,15 @@ import { Dialog } from '../components/ui/dialog'
 
 // ── Field tree ──
 
+function getStaticPlaceholder(type: FieldType): string {
+  switch (type) {
+    case 'number': return 'e.g. 42'
+    case 'boolean': return 'true or false'
+    case 'string': return 'e.g. 00010'
+    default: return 'Enter a fixed value'
+  }
+}
+
 function canHaveRule(type: FieldType): boolean {
   return type === 'string' || type === 'number' || type === 'boolean'
 }
@@ -176,8 +185,12 @@ function RuleEditor({
   const [enumValues, setEnumValues] = useState<string>(
     field.rule?.kind === 'enum' ? field.rule.values.join(', ') : '',
   )
+  const [staticValue, setStaticValue] = useState<string>(
+    field.rule?.kind === 'static' ? String(field.rule.value) : '',
+  )
 
   const availableKinds = [
+    { kind: 'static', label: 'Static' },
     { kind: 'range', label: 'Range' },
     { kind: 'format', label: 'Format' },
     { kind: 'enum', label: 'Enum' },
@@ -227,8 +240,30 @@ function RuleEditor({
         return
       }
       await onSave(rule)
+    } else if (ruleKind === 'static') {
+      if (!staticValue.trim()) {
+        setRuleError('A value is required for a static rule.')
+        return
+      }
+      let value: unknown = staticValue.trim()
+      if (field.type === 'number') {
+        const num = Number(value)
+        if (isNaN(num)) {
+          setRuleError('Value must be a valid number for a number field.')
+          return
+        }
+        value = num
+      } else if (field.type === 'boolean') {
+        value = value === 'true'
+      }
+      const rule: FieldRule = { kind: 'static', value }
+      if (!validateRuleForFieldType(rule, field.type)) {
+        setRuleError(`A "static" rule cannot be applied to a "${field.type}" field.`)
+        return
+      }
+      await onSave(rule)
     }
-  }, [ruleKind, rangeMin, rangeMax, formatSubtype, enumValues, field.type, onSave])
+  }, [ruleKind, rangeMin, rangeMax, formatSubtype, enumValues, staticValue, field.type, onSave])
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -307,6 +342,19 @@ function RuleEditor({
             placeholder="value1, value2, value3"
             value={enumValues}
             onChange={(e) => setEnumValues(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+      )}
+
+      {ruleKind === 'static' && (
+        <div className="mb-3">
+          <Label htmlFor="static-value">Fixed value</Label>
+          <Input
+            id="static-value"
+            placeholder={getStaticPlaceholder(field.type)}
+            value={staticValue}
+            onChange={(e) => setStaticValue(e.target.value)}
             className="mt-1"
           />
         </div>

@@ -22,6 +22,7 @@ export type FieldRule =
   | { kind: 'range'; min: number; max: number }
   | { kind: 'enum'; values: unknown[] }
   | { kind: 'format'; subtype: 'uuid' | 'date' | 'datetime' }
+  | { kind: 'static'; value: unknown }
 
 export interface Field {
   id: string

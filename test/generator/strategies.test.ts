@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { RangeStrategy } from "../../src/main/services/strategies/range.strategy"
 import { EnumStrategy } from "../../src/main/services/strategies/enum.strategy"
 import { FormatStrategy } from "../../src/main/services/strategies/format.strategy"
+import { StaticStrategy } from "../../src/main/services/strategies/static.strategy"
 import { DefaultStrategy } from "../../src/main/services/strategies/default.strategy"
 import { getStrategy } from "../../src/main/services/strategies"
 import type { Field } from "@shared/ipc.types"
@@ -206,5 +207,53 @@ describe("getStrategy factory", () => {
     const field = makeField({})
     const strategy = getStrategy(field)
     expect(strategy).toBeInstanceOf(DefaultStrategy)
+  })
+
+  it("returns StaticStrategy for static rule", () => {
+    const field = makeField({ rule: { kind: 'static', value: 'test' } })
+    const strategy = getStrategy(field)
+    expect(strategy).toBeInstanceOf(StaticStrategy)
+  })
+})
+
+describe("StaticStrategy", () => {
+  it("generates the exact static string value", () => {
+    const strategy = new StaticStrategy()
+    const field = makeField({
+      type: 'string',
+      rule: { kind: 'static', value: '00010' },
+    })
+    const result = strategy.generate(field)
+    expect(result).toBe('00010')
+  })
+
+  it("generates the exact static number value", () => {
+    const strategy = new StaticStrategy()
+    const field = makeField({
+      type: 'number',
+      rule: { kind: 'static', value: 42 },
+    })
+    const result = strategy.generate(field)
+    expect(result).toBe(42)
+  })
+
+  it("generates the exact static boolean value", () => {
+    const strategy = new StaticStrategy()
+    const field = makeField({
+      type: 'boolean',
+      rule: { kind: 'static', value: true },
+    })
+    const result = strategy.generate(field)
+    expect(result).toBe(true)
+  })
+
+  it("generates the same value across multiple calls", () => {
+    const strategy = new StaticStrategy()
+    const field = makeField({
+      type: 'string',
+      rule: { kind: 'static', value: '00010' },
+    })
+    const results = Array.from({ length: 100 }, () => strategy.generate(field))
+    expect(results.every(v => v === '00010')).toBe(true)
   })
 })

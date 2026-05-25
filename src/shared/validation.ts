@@ -59,10 +59,16 @@ export const formatRuleSchema = z.object({
   subtype: z.enum(['uuid', 'date', 'datetime']),
 })
 
+export const staticRuleSchema = z.object({
+  kind: z.literal('static'),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+})
+
 export const fieldRuleSchema = z.discriminatedUnion('kind', [
   rangeRuleBaseSchema,
   enumRuleSchema,
   formatRuleSchema,
+  staticRuleSchema,
 ])
 
 export const fieldUpdateRuleSchema = z.object({
@@ -107,7 +113,7 @@ export function validateRuleForFieldType(
       return fieldType === 'string' || fieldType === 'number' || fieldType === 'boolean'
     case 'format':
       return fieldType === 'string'
-    default:
-      return false
+    case 'static':
+      return true // valid for all field types
   }
 }
