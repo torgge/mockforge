@@ -1,8 +1,8 @@
 # MockForge — Implementation Plan
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Final  
-**Last Updated:** 2026-05-23  
+**Last Updated:** 2026-05-25  
 **Parent Document:** [MockForge SDD](mockforge-sdd.md)
 
 ---
@@ -15,7 +15,10 @@
 4. [Phase 2 — Core Features](#4-phase-2--core-features)
 5. [Phase 3 — Generator Engine](#5-phase-3--generator-engine)
 6. [Phase 4 — Polish & Distribution](#6-phase-4--polish--distribution)
-7. [Dependency Graph](#7-dependency-graph)
+7. [Phase 5 — CI/CD Pipeline](#7-phase-5--cicd-pipeline)
+8. [Phase 6 — Product Enhancements](#8-phase-6--product-enhancements)
+9. [Phase 7 — Quality & Testing Expansion](#9-phase-7--quality--testing-expansion)
+10. [Dependency Graph](#10-dependency-graph)
 
 ---
 
@@ -507,7 +510,204 @@ A task is considered done when all of the following are true:
 
 ---
 
-## 7. Dependency Graph
+## 7. Phase 5 — CI/CD Pipeline
+
+**Goal:** Automatizar o empacotamento e a publicação de releases via GitHub Actions, produzindo instaladores para as três plataformas em cada tag de versão.
+
+**Phase exit criteria:** Ao fazer push de uma tag `v*.*.*`, o pipeline é disparado e uma GitHub Release é criada com os artefatos `.dmg`, `.exe` NSIS, `.AppImage` e `.deb` anexados. `workflow_dispatch` permite builds manuais sob demanda.
+
+---
+
+### P5-T01 — GitHub Actions Release Pipeline
+
+**Dependencies:** P4-T04  
+**Branch:** `feat/p5-t01-cicd`
+
+| # | Subtask | Details |
+|---|---|---|
+| P5-T01.1 | Create workflow file | Create `.github/workflows/release.yml`. Configure `on.push.tags: ['v*.*.*']` and `on.workflow_dispatch` triggers. The `workflow_dispatch` input is parameter-free; the version is derived from `GITHUB_REF_NAME`. |
+| P5-T01.2 | Configure `build` job matrix | Define a `build` job with `strategy.matrix.os: [macos-latest, windows-latest, ubuntu-latest]`. All three legs run in parallel with `fail-fast: false` so a single platform failure does not cancel the others. |
+| P5-T01.3 | Set up Node 20 and npm cache | Use `actions/setup-node@v4` with `node-version: '20'` and `cache: 'npm'` on each runner. Pin Node to the same major version used in local development. |
+| P5-T01.4 | Install and rebuild native deps | Run `npm ci` then `npx electron-builder install-app-deps` to rebuild `better-sqlite3` against the Electron ABI for each platform. This replaces any pre-built binary with a platform-native one. |
+| P5-T01.5 | TypeScript compile check | Run `npm run typecheck` (or `npm run build:ts`) before packaging to catch type errors in CI before invoking `electron-builder`. Fail fast on any TypeScript error. |
+| P5-T01.6 | Run platform build | Execute `npm run build:mac` on `macos-latest`, `npm run build:win` on `windows-latest`, `npm run build:linux` on `ubuntu-latest`. Each script invokes `electron-builder` with the respective platform target. |
+| P5-T01.7 | Configure macOS output | `electron-builder` target: `dmg`. Expected artifact: `MockForge-{version}.dmg`. Optional: populate `CSC_LINK` (base64-encoded `.p12` certificate) and `CSC_KEY_PASSWORD` GitHub repository secrets to enable Apple code signing; if secrets are absent, the build proceeds unsigned. |
+| P5-T01.8 | Configure Windows output | `electron-builder` target: `nsis`. Expected artifact: `MockForge-Setup-{version}.exe`. Optional: populate `WIN_CSC_LINK` and `WIN_CSC_KEY_PASSWORD` secrets for Authenticode signing; unsigned build proceeds if absent. |
+| P5-T01.9 | Configure Linux output | `electron-builder` targets: `AppImage`, `deb`. Expected artifacts: `MockForge-{version}.AppImage`, `mockforge_{version}_amd64.deb`. No signing required for Linux targets. |
+| P5-T01.10 | Upload per-platform artifacts | Use `actions/upload-artifact@v4` at the end of each matrix leg to pass installer files to the `release` job. Name each artifact by platform (e.g., `release-macos`, `release-windows`, `release-linux`). |
+| P5-T01.11 | Configure `release` job | Add a `release` job with `needs: build` and `runs-on: ubuntu-latest`. Use `actions/download-artifact@v4` to collect all platform artifacts. Create a GitHub Release with `softprops/action-gh-release@v2`: attach all installers, set `generate_release_notes: true` to auto-populate the body from commit history, and mark as draft when triggered by `workflow_dispatch` for review before publishing. |
+
+**Acceptance Criteria:**
+- Pushing a tag matching `v*.*.*` triggers the workflow automatically; no manual step required
+- `workflow_dispatch` allows an on-demand build from any branch; resulting release is created as a draft
+- `build` job runs all three platform legs in parallel via matrix strategy
+- macOS leg produces a `.dmg` installer and uploads it as an artifact
+- Windows leg produces an NSIS `.exe` installer and uploads it as an artifact
+- Linux leg produces both `.AppImage` and `.deb` installers and uploads them as artifacts
+- All four artifact types are attached to the GitHub Release by the `release` job
+- `release` job does not run if any `build` leg fails (`needs: build` enforces this)
+- `better-sqlite3` is rebuilt against the Electron ABI on each platform via `install-app-deps`
+- TypeScript compile step fails the pipeline before packaging if type errors are present
+- macOS signing is configurable via `CSC_LINK` + `CSC_KEY_PASSWORD` secrets; absent secrets produce an unsigned build without pipeline failure
+- Windows signing is configurable via `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` secrets; absent secrets produce an unsigned build without pipeline failure
+- Pipeline produces no hardcoded paths, tokens, or credentials in the workflow file; all sensitive values are referenced from repository secrets
+
+---
+
+## 8. Phase 6 — Product Enhancements
+
+**Goal:** Elevar a experiência do usuário com ícone de aplicação, atualizações automáticas e suporte completo a schemas Avro reais do Confluent Schema Registry.
+
+**Phase exit criteria:** App exibe ícone nativo em todas as plataformas, verifica e instala atualizações automaticamente, e importa qualquer schema Avro do Confluent sem erros.
+
+---
+
+### P6-T01 — App Icon
+
+**Dependencies:** P4-T04  
+**Branch:** `feat/p6-t01-app-icon`
+
+| # | Subtask | Details |
+|---|---|---|
+| P6-T01.1 | Criar artefatos de ícone | Produzir o ícone nas três resoluções exigidas: `build/icons/icon.icns` (macOS, bundle com 16×16 até 1024×1024), `build/icons/icon.ico` (Windows, multi-resolução 16–256 px), `build/icons/icon.png` (Linux, 512×512 px, fundo transparente). |
+| P6-T01.2 | Organizar diretório de build | Criar `build/icons/` na raiz do repositório. Garantir que os três arquivos estejam presentes antes de configurar o builder. |
+| P6-T01.3 | Configurar `electron-builder.yml` — macOS | Adicionar `mac.icon: build/icons/icon.icns` e verificar que `mac.target` inclui `dmg`. |
+| P6-T01.4 | Configurar `electron-builder.yml` — Windows | Adicionar `win.icon: build/icons/icon.ico` e verificar que `win.target` inclui `nsis`. |
+| P6-T01.5 | Configurar `electron-builder.yml` — Linux | Adicionar `linux.icon: build/icons/icon.png` e verificar que `linux.target` inclui `AppImage` e `deb`. |
+| P6-T01.6 | Verificar ícone em runtime | Definir `icon` em `BrowserWindow` options apontando para o arquivo correto por plataforma (relevante para Linux e Windows em modo dev). |
+| P6-T01.7 | Testar build de cada plataforma | Executar `npm run build:mac`, `npm run build:win` e `npm run build:linux`. Inspecionar visualmente o ícone no instalador gerado e no app instalado. |
+
+**Acceptance Criteria:**
+- Ícone aparece no Dock (macOS), Taskbar (Windows) e App Launcher (Linux) após instalação
+- Ícone aparece na janela do `.dmg` (macOS) e no wizard do instalador NSIS (Windows)
+- `.AppImage` e `.deb` exibem o ícone correto nos gerenciadores de arquivo
+- `npm run build` não introduz erros relacionados a assets de ícone ausentes
+
+---
+
+### P6-T02 — Auto-Update (electron-updater)
+
+**Dependencies:** P4-T04, P5-T01  
+**Branch:** `feat/p6-t02-auto-update`
+
+| # | Subtask | Details |
+|---|---|---|
+| P6-T02.1 | Instalar dependência | `npm install electron-updater`. Confirmar que a versão é compatível com a versão do Electron em uso. |
+| P6-T02.2 | Configurar publish no `electron-builder.yml` | Adicionar bloco `publish` com `provider: github`, `owner` e `repo`. Isso instrui o builder a gerar os metadados de update (`latest.yml`, `latest-linux.yml`, etc.) junto com cada release. |
+| P6-T02.3 | Implementar `UpdateService` | Criar `src/main/services/update.service.ts`. No método `checkForUpdates()`: chamar `autoUpdater.checkForUpdatesAndNotify()` e registrar handlers para `update-available`, `update-downloaded` e `error`. |
+| P6-T02.4 | Chamar no startup | Em `src/main/index.ts`, chamar `updateService.checkForUpdates()` depois que `app` estiver pronto e a janela principal for exibida (delay mínimo de 3 s para não impactar cold-start). |
+| P6-T02.5 | Expor canais IPC de update | Adicionar ao preload: `onUpdateAvailable(cb)`, `onUpdateDownloaded(cb)` e `installUpdate()`. O renderer usa esses canais para reagir ao estado de update. |
+| P6-T02.6 | Implementar UI de notificação | Criar componente `UpdateBanner.tsx` no renderer. Exibe banner não-bloqueante quando `onUpdateAvailable` dispara. Ao clicar em "Instalar agora", chama `installUpdate()` (que reinicia o app); ao clicar em "Depois", dispensa o banner até o próximo startup. |
+| P6-T02.7 | Suporte a update silencioso | Ler valor de `settings` `auto_update_silent` (boolean). Se `true`, baixar e instalar automaticamente no próximo encerramento sem exibir o banner. |
+| P6-T02.8 | Escrever testes | Mockar `autoUpdater` e testar os casos: update disponível, update baixado, erro de rede, update silencioso. |
+
+**Acceptance Criteria:**
+- App verifica updates imediatamente ao iniciar (com delay configurável) nas 3 plataformas
+- Quando um update está disponível, o banner é exibido sem bloquear a UI
+- Após confirmação do usuário, o update é instalado e o app reinicia automaticamente
+- Se nenhum update estiver disponível, nenhum elemento de UI é exibido
+- Erros de rede durante a verificação são capturados e não crasham o app
+- Modo silencioso instala o update no próximo fechamento sem prompt
+
+---
+
+### P6-T03 — Suporte a Tipos Avro Avançados
+
+**Dependencies:** P2-T03  
+**Branch:** `feat/p6-t03-avro-advanced`
+
+| # | Subtask | Details |
+|---|---|---|
+| P6-T03.1 | Suporte a `record` aninhado multi-nível | Estender `AvroParser` para resolver referências a tipos `record` definidos em qualquer nível do schema, não apenas no nível raiz. Garantir que `parent_field_id` seja atribuído corretamente para qualquer profundidade. |
+| P6-T03.2 | Suporte a `union` complexo (múltiplos tipos não-null) | Quando a union contiver mais de um tipo não-null (ex.: `["null", "string", "int"]`), mapear para o tipo mais abrangente ou criar um campo `anyOf` com subtypes. Documentar a estratégia de resolução escolhida. |
+| P6-T03.3 | Suporte a `namespace` em tipos customizados | Resolver referências de tipo que incluem namespace qualificado (ex.: `com.example.User`) buscando a definição pelo nome completo e pelo nome simples. Evitar conflitos de nome em schemas com múltiplos namespaces. |
+| P6-T03.4 | Suporte a tipos nomeados compartilhados | Tratar tipos `record` e `enum` definidos uma vez e referenciados por nome em múltiplos campos (reuso de schema). |
+| P6-T03.5 | Criar fixtures de teste avançados | Adicionar em `test/fixtures/`: `nested-record.avsc`, `complex-union.avsc`, `namespaced-types.avsc`, e pelo menos um schema real exportado do Confluent Schema Registry. |
+| P6-T03.6 | Escrever testes de regressão | Garantir que todos os schemas das fixtures novas importam sem erro e produzem a árvore de campos esperada. Garantir que os testes da tarefa `P2-T03` continuam passando. |
+
+**Acceptance Criteria:**
+- Schemas Avro reais do Confluent Schema Registry importam sem erro (testado com pelo menos 3 schemas distintos)
+- `record` aninhado em qualquer profundidade gera a árvore de campos correta
+- `union` com múltiplos tipos não-null é resolvido de forma determinística e documentada
+- Tipos referenciados por namespace qualificado são resolvidos corretamente
+- Todos os testes existentes da tarefa P2-T03 continuam passando após as mudanças
+
+---
+
+## 9. Phase 7 — Quality & Testing Expansion
+
+**Goal:** Ampliar a cobertura de testes e fechar o loop de qualidade com CI automático em Pull Requests, testes de componentes React e indicadores de status visíveis no repositório.
+
+**Phase exit criteria:** PRs para `main` são bloqueados automaticamente se typecheck ou testes falharem; cobertura de componentes React ≥ 60%; badge de status visível no README.
+
+---
+
+### P7-T01 — Pipeline de CI para Pull Requests
+
+**Dependencies:** P5-T01  
+**Branch:** `feat/p7-t01-pr-ci`
+
+| # | Subtask | Details |
+|---|---|---|
+| P7-T01.1 | Criar `.github/workflows/ci.yml` | Trigger: `on.pull_request.branches: [main]`. Runner: `ubuntu-latest`. Usar `actions/setup-node@v4` com `node-version: '20'` e `cache: 'npm'`. |
+| P7-T01.2 | Step de instalação de dependências | `npm ci` sem o rebuild de nativos (CI não empacota; evitar overhead de compilação de `better-sqlite3`). |
+| P7-T01.3 | Step `typecheck` | Executar `npm run typecheck` (ou equivalente). Falha bloqueia o merge do PR. |
+| P7-T01.4 | Step `test` | Executar `npm test`. Falha bloqueia o merge do PR. Publicar relatório de cobertura como artefato do workflow. |
+| P7-T01.5 | Configurar branch protection | Documentar (no README ou no próprio workflow) as regras de proteção de branch a serem ativadas no GitHub: requer o check `ci / typecheck` e `ci / test` antes do merge. |
+| P7-T01.6 | Verificar tempo de execução | O workflow completo deve terminar em menos de 5 minutos para não impactar o fluxo de desenvolvimento. |
+
+**Acceptance Criteria:**
+- Todo PR aberto para `main` dispara o workflow `ci.yml` automaticamente
+- Se `typecheck` falhar, o PR é marcado como bloqueado (check failing)
+- Se `test` falhar, o PR é marcado como bloqueado (check failing)
+- PRs com typecheck e testes passando recebem check verde e podem ser mergeados
+- Relatório de cobertura está disponível como artefato no workflow
+
+---
+
+### P7-T02 — Testes de Componentes React
+
+**Dependencies:** P2-T04, P2-T05, P3-T04  
+**Branch:** `feat/p7-t02-component-tests`
+
+| # | Subtask | Details |
+|---|---|---|
+| P7-T02.1 | Instalar dependências de teste | `npm install -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom`. |
+| P7-T02.2 | Configurar Vitest para o renderer | Adicionar configuração de `test` no `vite.config.ts` do renderer: `environment: 'jsdom'`, `setupFiles: ['src/renderer/test/setup.ts']`. Criar `setup.ts` importando `@testing-library/jest-dom`. |
+| P7-T02.3 | Mockar `window.mockforge` | Criar `src/renderer/test/mocks/ipc.mock.ts` com mock completo de `window.mockforge` usando `vi.fn()`. Esse mock é importado no `setup.ts`. |
+| P7-T02.4 | Escrever testes de `ProjectsPage` | Cobrir: renderização da lista de projetos, criação via formulário, busca por nome, confirmação de exclusão, navegação para Schema Editor. |
+| P7-T02.5 | Escrever testes de `SchemaEditorPage` | Cobrir: renderização da árvore de campos, seleção de regra por tipo de campo, trigger de importação Avro, persistência de regra após save. |
+| P7-T02.6 | Escrever testes de `GeneratorPage` | Cobrir: input de quantidade, clique em "Generate", renderização do JSON viewer, botão de copiar, botão de exportar. |
+| P7-T02.7 | Configurar relatório de cobertura | Adicionar `coverage: { provider: 'v8', reporter: ['text', 'lcov'] }` na config do Vitest. Executar com `npm run test:coverage`. Meta: ≥ 60% nas três páginas. |
+
+**Acceptance Criteria:**
+- `npm test` executa os testes de componentes junto com os testes de serviço existentes
+- Cobertura de `ProjectsPage`, `SchemaEditorPage` e `GeneratorPage` é ≥ 60% cada
+- Testes de componente não dependem de Electron ou SQLite (mocks isolam o IPC)
+- Todos os testes passam em ambiente CI (ubuntu-latest, sem display)
+
+---
+
+### P7-T03 — Badge de CI no README
+
+**Dependencies:** P7-T01  
+**Branch:** `feat/p7-t03-readme-badge`
+
+| # | Subtask | Details |
+|---|---|---|
+| P7-T03.1 | Adicionar badge do workflow de release | Inserir no `README.md`, logo abaixo do título: badge de status do workflow `release.yml` usando a sintaxe oficial do GitHub (`![Release](https://github.com/{owner}/{repo}/actions/workflows/release.yml/badge.svg)`). |
+| P7-T03.2 | Adicionar badge do workflow de CI | Inserir ao lado do badge de release: badge de status do workflow `ci.yml` (`![CI](https://github.com/{owner}/{repo}/actions/workflows/ci.yml/badge.svg)`). |
+| P7-T03.3 | Verificar badges ao vivo | Após merge do PR no GitHub, confirmar que ambos os badges carregam corretamente e refletem o status real das últimas execuções. |
+
+**Acceptance Criteria:**
+- Badge do workflow `release.yml` aparece no README e reflete o status da última build de release
+- Badge do workflow `ci.yml` aparece no README e reflete o status do último CI em PR
+- Badges são visíveis no GitHub sem autenticação (repositório público ou permissão correta)
+- Links dos badges apontam para a página correta do workflow no GitHub Actions
+
+---
+
+## 10. Dependency Graph
 
 ```
 P1-T01 (Scaffolding)
@@ -535,4 +735,14 @@ P3-T03 + P2-T03 ──→ P4-T02 (Error Handling)
 P2-T04 + P2-T05 + P3-T04 ──→ P4-T03 (Keyboard)
 All ──→ P4-T04 (Packaging)
 All ──→ P4-T05 (Final QA)
+
+P4-T04 + P4-T05 ──→ P5-T01 (CI/CD Release Pipeline)
+
+P4-T04 ──→ P6-T01 (App Icon)
+P4-T04 + P5-T01 ──→ P6-T02 (Auto-Update)
+P2-T03 ──→ P6-T03 (Advanced Avro Types)
+
+P5-T01 ──→ P7-T01 (PR CI Pipeline)
+P2-T04 + P2-T05 + P3-T04 ──→ P7-T02 (Component Tests)
+P7-T01 ──→ P7-T03 (README Badge)
 ```
