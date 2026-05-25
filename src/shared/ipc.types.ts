@@ -23,6 +23,7 @@ export type FieldRule =
   | { kind: 'enum'; values: unknown[] }
   | { kind: 'format'; subtype: 'uuid' | 'date' | 'datetime' }
   | { kind: 'static'; value: unknown }
+  | { kind: 'sequential'; start: number }
 
 export interface Field {
   id: string

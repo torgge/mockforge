@@ -64,11 +64,17 @@ export const staticRuleSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean()]),
 })
 
+export const sequentialRuleSchema = z.object({
+  kind: z.literal('sequential'),
+  start: z.number().int(),
+})
+
 export const fieldRuleSchema = z.discriminatedUnion('kind', [
   rangeRuleBaseSchema,
   enumRuleSchema,
   formatRuleSchema,
   staticRuleSchema,
+  sequentialRuleSchema,
 ])
 
 export const fieldUpdateRuleSchema = z.object({
@@ -115,5 +121,7 @@ export function validateRuleForFieldType(
       return fieldType === 'string'
     case 'static':
       return true // valid for all field types
+    case 'sequential':
+      return fieldType === 'number' || fieldType === 'string'
   }
 }

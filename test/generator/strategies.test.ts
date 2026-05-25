@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { RangeStrategy } from "../../src/main/services/strategies/range.strategy"
 import { EnumStrategy } from "../../src/main/services/strategies/enum.strategy"
 import { FormatStrategy } from "../../src/main/services/strategies/format.strategy"
 import { StaticStrategy } from "../../src/main/services/strategies/static.strategy"
+import { SequentialStrategy } from "../../src/main/services/strategies/sequential.strategy"
 import { DefaultStrategy } from "../../src/main/services/strategies/default.strategy"
 import { getStrategy } from "../../src/main/services/strategies"
 import type { Field } from "@shared/ipc.types"
@@ -295,5 +296,72 @@ describe("RangeStrategy on string fields", () => {
       expect(Number(r)).toBeGreaterThanOrEqual(1)
       expect(Number(r)).toBeLessThanOrEqual(5)
     })
+  })
+})
+
+describe("SequentialStrategy", () => {
+  const strategy = new SequentialStrategy()
+
+  beforeEach(() => {
+    strategy.setStart(0)
+    strategy.reset()
+  })
+
+  it("increments by 1 starting from 0 by default", () => {
+    const field = makeField({
+      type: 'number',
+      rule: { kind: 'sequential', start: 0 },
+    })
+    expect(strategy.generate(field)).toBe(0)
+    expect(strategy.generate(field)).toBe(1)
+    expect(strategy.generate(field)).toBe(2)
+    expect(strategy.generate(field)).toBe(3)
+  })
+
+  it("starts from user-defined start value", () => {
+    const field = makeField({
+      type: 'number',
+      rule: { kind: 'sequential', start: 100 },
+    })
+    strategy.setStart(100)
+    expect(strategy.generate(field)).toBe(100)
+    expect(strategy.generate(field)).toBe(101)
+    expect(strategy.generate(field)).toBe(102)
+  })
+
+  it("returns strings when field type is string", () => {
+    const field = makeField({
+      type: 'string',
+      rule: { kind: 'sequential', start: 1 },
+    })
+    strategy.setStart(1)
+    const r1 = strategy.generate(field)
+    const r2 = strategy.generate(field)
+    expect(typeof r1).toBe('string')
+    expect(r1).toBe('1')
+    expect(r2).toBe('2')
+  })
+
+  it("reset restarts counter from the configured start", () => {
+    const field = makeField({
+      type: 'number',
+      rule: { kind: 'sequential', start: 5 },
+    })
+    strategy.setStart(5)
+    strategy.generate(field) // 5
+    strategy.generate(field) // 6
+    strategy.generate(field) // 7
+    strategy.reset()
+    strategy.setStart(5)
+    expect(strategy.generate(field)).toBe(5)
+  })
+
+  it("returns sequential values across many iterations", () => {
+    const field = makeField({
+      type: 'number',
+      rule: { kind: 'sequential', start: 0 },
+    })
+    const values = Array.from({ length: 50 }, () => strategy.generate(field))
+    values.forEach((v, i) => expect(v).toBe(i))
   })
 })

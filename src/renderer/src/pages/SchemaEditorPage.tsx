@@ -188,12 +188,16 @@ function RuleEditor({
   const [staticValue, setStaticValue] = useState<string>(
     field.rule?.kind === 'static' ? String(field.rule.value) : '',
   )
+  const [sequentialStart, setSequentialStart] = useState<number>(
+    field.rule?.kind === 'sequential' ? field.rule.start : 0,
+  )
 
   const availableKinds = [
     { kind: 'static', label: 'Static' },
     { kind: 'range', label: 'Range' },
     { kind: 'format', label: 'Format' },
     { kind: 'enum', label: 'Enum' },
+    { kind: 'sequential', label: 'Sequential' },
   ]
 
   const handleSave = useCallback(async () => {
@@ -262,8 +266,15 @@ function RuleEditor({
         return
       }
       await onSave(rule)
+    } else if (ruleKind === 'sequential') {
+      const rule: FieldRule = { kind: 'sequential', start: sequentialStart }
+      if (!validateRuleForFieldType(rule, field.type)) {
+        setRuleError(`A "sequential" rule cannot be applied to a "${field.type}" field. Only "number" and "string" fields support sequential rules.`)
+        return
+      }
+      await onSave(rule)
     }
-  }, [ruleKind, rangeMin, rangeMax, formatSubtype, enumValues, staticValue, field.type, onSave])
+  }, [ruleKind, rangeMin, rangeMax, formatSubtype, enumValues, staticValue, sequentialStart, field.type, onSave])
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -355,6 +366,19 @@ function RuleEditor({
             placeholder={getStaticPlaceholder(field.type)}
             value={staticValue}
             onChange={(e) => setStaticValue(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+      )}
+
+      {ruleKind === 'sequential' && (
+        <div className="mb-3">
+          <Label htmlFor="sequential-start">Start at</Label>
+          <Input
+            id="sequential-start"
+            type="number"
+            value={sequentialStart}
+            onChange={(e) => setSequentialStart(Number(e.target.value))}
             className="mt-1"
           />
         </div>
