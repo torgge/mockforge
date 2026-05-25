@@ -9,6 +9,12 @@ export class RangeStrategy implements GenerationStrategy {
     }
     const { min, max } = field.rule
     const isFloat = !Number.isInteger(min) || !Number.isInteger(max)
+    if (field.type === 'string') {
+      const num = isFloat
+        ? faker.number.float({ min, max, multipleOf: 0.01 })
+        : faker.number.int({ min, max })
+      return String(num)
+    }
     if (isFloat) {
       return faker.number.float({ min, max, multipleOf: 0.01 })
     }

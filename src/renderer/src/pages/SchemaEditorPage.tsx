@@ -209,7 +209,7 @@ function RuleEditor({
       }
       const rule: FieldRule = { kind: 'range', min: rangeMin, max: rangeMax }
       if (!validateRuleForFieldType(rule, field.type)) {
-        setRuleError(`A "range" rule cannot be applied to a "${field.type}" field. Only "number" fields support range rules.`)
+        setRuleError(`A "range" rule cannot be applied to a "${field.type}" field. Only "number" and "string" fields support range rules.`)
         return
       }
       await onSave(rule)

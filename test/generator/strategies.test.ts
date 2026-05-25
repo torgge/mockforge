@@ -257,3 +257,43 @@ describe("StaticStrategy", () => {
     expect(results.every(v => v === '00010')).toBe(true)
   })
 })
+
+describe("RangeStrategy on string fields", () => {
+  const strategy = new RangeStrategy()
+
+  it("generates integer strings for integer range on string field", () => {
+    const result = strategy.generate(makeField({
+      type: 'string',
+      rule: { kind: 'range', min: 1, max: 100 },
+    })) as string
+    expect(typeof result).toBe('string')
+    const num = Number(result)
+    expect(Number.isInteger(num)).toBe(true)
+    expect(num).toBeGreaterThanOrEqual(1)
+    expect(num).toBeLessThanOrEqual(100)
+  })
+
+  it("generates float strings when min/max are floats on string field", () => {
+    const result = strategy.generate(makeField({
+      type: 'string',
+      rule: { kind: 'range', min: 0.5, max: 0.9 },
+    })) as string
+    expect(typeof result).toBe('string')
+    const num = Number(result)
+    expect(num).toBeGreaterThanOrEqual(0.5)
+    expect(num).toBeLessThanOrEqual(0.9)
+  })
+
+  it("generates values within range across multiple calls on string field", () => {
+    const field = makeField({
+      type: 'string',
+      rule: { kind: 'range', min: 1, max: 5 },
+    })
+    const results = Array.from({ length: 20 }, () => strategy.generate(field))
+    results.forEach(r => {
+      expect(typeof r).toBe('string')
+      expect(Number(r)).toBeGreaterThanOrEqual(1)
+      expect(Number(r)).toBeLessThanOrEqual(5)
+    })
+  })
+})

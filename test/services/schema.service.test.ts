@@ -136,7 +136,7 @@ describe('SchemaService', () => {
       expect(cleared.rule).toBeNull()
     })
 
-    it('should reject a range rule on a string field', async () => {
+    it('should accept a range rule on a string field', async () => {
       const { SchemaService } = await import(
         '../../src/main/services/schema.service'
       )
@@ -150,9 +150,12 @@ describe('SchemaService', () => {
       const schema = await SchemaService.importAvro(projectId, avroJson)
       const field = schema.fields[0]
 
-      await expect(
-        SchemaService.updateFieldRule(field.id, { kind: 'range', min: 1, max: 10 }),
-      ).rejects.toThrow('Rule kind "range" is not allowed for field type "string"')
+      const updated = await SchemaService.updateFieldRule(field.id, {
+        kind: 'range',
+        min: 1,
+        max: 10,
+      })
+      expect(updated.rule).toEqual({ kind: 'range', min: 1, max: 10 })
     })
 
     it('should reject an enum rule on a number field (actually allowed per validation)', async () => {

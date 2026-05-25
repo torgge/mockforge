@@ -108,7 +108,7 @@ export function validateRuleForFieldType(
 ): boolean {
   switch (rule.kind) {
     case 'range':
-      return fieldType === 'number'
+      return fieldType === 'number' || fieldType === 'string'
     case 'enum':
       return fieldType === 'string' || fieldType === 'number' || fieldType === 'boolean'
     case 'format':
