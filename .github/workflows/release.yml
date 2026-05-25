@@ -25,9 +25,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -41,39 +43,23 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      - name: Compile
+      - name: Compile (electron-vite)
         run: npm run build
 
-      - name: Package (macOS, unsigned)
-        if: matrix.platform == 'mac' && secrets.CSC_LINK == ''
+      - name: Package macOS
+        if: matrix.platform == 'mac'
         run: npm run build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
-      - name: Package (macOS, signed)
-        if: matrix.platform == 'mac' && secrets.CSC_LINK != ''
-        run: npm run build:mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-
-      - name: Package (Windows, unsigned)
-        if: matrix.platform == 'win' && secrets.WIN_CSC_LINK == ''
+      - name: Package Windows
+        if: matrix.platform == 'win'
         run: npm run build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Package (Windows, signed)
-        if: matrix.platform == 'win' && secrets.WIN_CSC_LINK != ''
-        run: npm run build:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-
-      - name: Package (Linux)
+      - name: Package Linux
         if: matrix.platform == 'linux'
         run: npm run build:linux
         env:
@@ -93,6 +79,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -106,3 +93,5 @@ jobs:
           files: artifacts/**
           generate_release_notes: true
           draft: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
