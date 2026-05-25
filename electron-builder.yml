@@ -38,6 +38,7 @@ nsis:
   oneClick: true
   uninstallDisplayName: ${productName} ${version}
   shortcutName: ${productName}
+  artifactName: ${productName}-Setup-${version}.${ext}
 
 linux:
   target:
