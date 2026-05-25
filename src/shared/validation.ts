@@ -84,6 +84,13 @@ export const settingsGetSchema = z.object({
   key: z.string().min(1),
 })
 
+export const dialogOpenFileSchema = z.object({
+  filters: z.array(z.object({
+    name: z.string(),
+    extensions: z.array(z.string()),
+  })),
+})
+
 export const settingsSetSchema = z.object({
   key: z.string().min(1),
   value: z.string(),

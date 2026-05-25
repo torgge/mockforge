@@ -11,6 +11,7 @@ export const IPC_CHANNELS = {
   EXPORT_TO_FILE: 'export:toFile',
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
+  DIALOG_OPEN_FILE: 'dialog:openFile',
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

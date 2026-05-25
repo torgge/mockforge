@@ -3,6 +3,7 @@ import { IPC_CHANNELS } from '@shared/ipc.channels'
 import { ProjectService } from '../services/project.service'
 import { SchemaService } from '../services/schema.service'
 import { GeneratorService } from '../services/generator.service'
+import { DialogService } from '../services/dialog.service'
 import { ExportService } from '../services/export.service'
 import { SettingsService } from '../services/settings.service'
 import {
@@ -17,6 +18,7 @@ import {
   exportToFileSchema,
   settingsGetSchema,
   settingsSetSchema,
+  dialogOpenFileSchema,
 } from '@shared/validation'
 
 function wrapHandler<T>(fn: (...args: unknown[]) => Promise<T>) {
@@ -117,6 +119,16 @@ export function registerAllHandlers(): void {
     wrapHandler(async (payload) => {
       const parsed = exportToFileSchema.parse(payload)
       return ExportService.toFile(parsed)
+    }),
+  )
+
+  // ── Dialog channel ──
+
+  ipcMain.handle(
+    IPC_CHANNELS.DIALOG_OPEN_FILE,
+    wrapHandler(async (payload) => {
+      const parsed = dialogOpenFileSchema.parse(payload)
+      return DialogService.openFile(parsed)
     }),
   )
 

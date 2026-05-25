@@ -9,6 +9,7 @@ import type {
   SchemaImportAvroPayload,
   FieldUpdateRulePayload,
   GenerateRequest,
+  DialogOpenFilePayload,
   ExportToFilePayload,
   SettingsGetPayload,
   SettingsSetPayload,
@@ -39,6 +40,10 @@ contextBridge.exposeInMainWorld('mockforge', {
   generator: {
     run: (payload: GenerateRequest) =>
       ipcRenderer.invoke(IPC_CHANNELS.GENERATOR_RUN, payload),
+  },
+  dialog: {
+    openFile: (payload: DialogOpenFilePayload) =>
+      ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_FILE, payload),
   },
   export: {
     toFile: (payload: ExportToFilePayload) =>

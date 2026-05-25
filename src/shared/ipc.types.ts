@@ -79,6 +79,16 @@ export interface FieldUpdateRulePayload {
   rule: FieldRule | null
 }
 
+export interface DialogOpenFilePayload {
+  filters: { name: string; extensions: string[] }[]
+}
+
+export interface DialogOpenFileResult {
+  canceled: boolean
+  content: string
+  filePath: string
+}
+
 export interface ExportToFilePayload {
   data: unknown[]
   suggestedName: string
@@ -116,6 +126,9 @@ export interface MockForgeAPI {
   }
   generator: {
     run: (payload: GenerateRequest) => Promise<unknown[]>
+  }
+  dialog: {
+    openFile: (payload: DialogOpenFilePayload) => Promise<DialogOpenFileResult | null>
   }
   export: {
     toFile: (payload: ExportToFilePayload) => Promise<ExportToFileResult | null>

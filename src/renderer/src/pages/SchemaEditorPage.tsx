@@ -351,6 +351,7 @@ export function SchemaEditorPage() {
   const [importAvroJson, setImportAvroJson] = useState('')
   const [importError, setImportError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [isSelectingFile, setIsSelectingFile] = useState(false)
   const [showImportConfirm, setShowImportConfirm] = useState(false)
 
   // Tree keyboard navigation state
@@ -528,6 +529,25 @@ export function SchemaEditorPage() {
     }
   }
 
+  const handleOpenAvscFile = useCallback(async () => {
+    setIsSelectingFile(true)
+    setImportError(null)
+    try {
+      const result = await window.mockforge.dialog.openFile({
+        filters: [{ name: 'Avro Schema', extensions: ['avsc', 'avro', 'json'] }],
+      })
+      if (result && !result.canceled) {
+        setImportAvroJson(result.content)
+      }
+    } catch (err) {
+      setImportError(
+        err instanceof Error ? err.message : 'Failed to open file',
+      )
+    } finally {
+      setIsSelectingFile(false)
+    }
+  }, [])
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -699,7 +719,22 @@ export function SchemaEditorPage() {
           <>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="avro-json">Paste Avro JSON schema</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="avro-json">Paste Avro JSON schema</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenAvscFile}
+                    disabled={isSelectingFile}
+                  >
+                    {isSelectingFile ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="mr-1 h-3 w-3" />
+                    )}
+                    Open .avsc File
+                  </Button>
+                </div>
                 <textarea
                   id="avro-json"
                   className="flex min-h-[200px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-400"
