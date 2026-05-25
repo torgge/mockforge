@@ -17,7 +17,7 @@ MockForge is an offline desktop application built with Electron and TypeScript. 
 | State | Zustand |
 | Forms | react-hook-form + zod |
 | Database | SQLite + Drizzle ORM |
-| Schema import | avsc |
+| Schema import | Custom Avro parser (built-in) |
 | Data generation | @faker-js/faker |
 | Packaging | electron-builder |
 
@@ -29,7 +29,80 @@ MockForge is an offline desktop application built with Electron and TypeScript. 
 
 ## Development
 
-> Setup instructions will be added during Wave 0 — Bootstrap.
+### Prerequisites
+
+- **Node.js** 20.x or later
+- **npm** 10.x or later
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/torgge/mockforge.git
+cd mockforge
+
+# Install dependencies (rebuilds native sqlite3 for Electron automatically)
+npm install
+```
+
+### Available Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Electron app in development mode with HMR |
+| `npm run build` | Build for production (electron-vite) |
+| `npm test` | Run all tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run typecheck` | TypeScript type checking (main + renderer) |
+| `npm run build:mac` | Package macOS `.dmg` |
+| `npm run build:win` | Package Windows `.exe` installer |
+| `npm run build:linux` | Package Linux `.AppImage` + `.deb` |
+| `npm run build:all` | Package all platforms |
+| `npm run db:generate` | Generate Drizzle ORM migrations |
+| `npm run db:migrate` | Apply pending database migrations |
+| `npm run db:push` | Push schema changes directly to database |
+
+### Running the App
+
+```bash
+npm run dev
+```
+
+This starts the Electron app with Vite's HMR. The SQLite database (`mockforge.db`) is created automatically in your OS user data directory on first launch.
+
+### Running Tests
+
+```bash
+npm test
+```
+
+82 tests across 9 test files:
+
+- **Backend services** — Project CRUD, Schema & field rules, Avro parsing, Export, Settings
+- **Generator engine** — Strategies (range, enum, format, default), nested field resolver
+- **Performance benchmarks** — Generation speed for 100 / 1,000 / 10,000 records
+
+### Project Structure
+
+```
+src/
+├── main/              # Electron main process (Node.js)
+│   ├── db/            # Drizzle schema + DB client
+│   ├── ipc/           # IPC handler registry (12 channels)
+│   └── services/      # Business logic + generator strategies
+├── preload/           # contextBridge setup (typed IPC surface)
+├── shared/            # Types, channel constants, Zod validation
+└── renderer/          # React UI
+    ├── components/    # Reusable UI (Layout, ErrorBoundary, ui primitives)
+    ├── pages/         # Projects, Schema Editor, Generator, Settings
+    ├── hooks/         # useIpc hook
+    └── store/         # Zustand state slices
+test/
+├── fixtures/          # Avro schema test fixtures (.avsc)
+├── services/          # Backend service unit tests
+├── generator/         # Generator & strategy unit tests
+└── benchmarks/        # Performance benchmarks
+```
 
 ## Gerando uma Release
 
