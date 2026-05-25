@@ -1,6 +1,6 @@
 {
   "name": "mockforge",
-  "version": "0.1.0",
+  "version": "0.1.7",
   "description": "Desktop application for generating structured mock JSON data",
   "main": "./out/main/index.js",
   "author": "MockForge Contributors",
