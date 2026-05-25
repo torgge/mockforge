@@ -49,6 +49,7 @@ linux:
       arch:
         - x64
   category: Development
+  maintainer: "George Bonespirito <george@bonespirito.com>"
   mimeTypes:
     - application/json
   desktop:
