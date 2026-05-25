@@ -257,6 +257,15 @@ describe("StaticStrategy", () => {
     const results = Array.from({ length: 100 }, () => strategy.generate(field))
     expect(results.every(v => v === '00010')).toBe(true)
   })
+
+  it("generates null when value is set to null", () => {
+    const strategy = new StaticStrategy()
+    const field = makeField({
+      type: 'string',
+      rule: { kind: 'static', value: null },
+    })
+    expect(strategy.generate(field)).toBeNull()
+  })
 })
 
 describe("RangeStrategy on string fields", () => {

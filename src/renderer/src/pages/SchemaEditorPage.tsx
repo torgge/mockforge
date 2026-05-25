@@ -186,7 +186,10 @@ function RuleEditor({
     field.rule?.kind === 'enum' ? field.rule.values.join(', ') : '',
   )
   const [staticValue, setStaticValue] = useState<string>(
-    field.rule?.kind === 'static' ? String(field.rule.value) : '',
+    field.rule?.kind === 'static' && field.rule.value !== null ? String(field.rule.value) : '',
+  )
+  const [staticIsNull, setStaticIsNull] = useState<boolean>(
+    field.rule?.kind === 'static' ? field.rule.value === null : false,
   )
   const [sequentialStart, setSequentialStart] = useState<number>(
     field.rule?.kind === 'sequential' ? field.rule.start : 0,
@@ -245,8 +248,13 @@ function RuleEditor({
       }
       await onSave(rule)
     } else if (ruleKind === 'static') {
+      if (staticIsNull) {
+        const rule: FieldRule = { kind: 'static', value: null }
+        await onSave(rule)
+        return
+      }
       if (!staticValue.trim()) {
-        setRuleError('A value is required for a static rule.')
+        setRuleError('A value is required for a static rule, or check "Set to null".')
         return
       }
       let value: unknown = staticValue.trim()
@@ -293,7 +301,7 @@ function RuleEditor({
           id="rule-kind"
           className="mt-1 flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm"
           value={ruleKind}
-          onChange={(e) => { setRuleKind(e.target.value); setRuleError(null) }}
+          onChange={(e) => { setRuleKind(e.target.value); setRuleError(null); setStaticIsNull(false) }}
         >
           <option value="none">No rule</option>
           {availableKinds.map((ak) => (
@@ -359,15 +367,31 @@ function RuleEditor({
       )}
 
       {ruleKind === 'static' && (
-        <div className="mb-3">
-          <Label htmlFor="static-value">Fixed value</Label>
-          <Input
-            id="static-value"
-            placeholder={getStaticPlaceholder(field.type)}
-            value={staticValue}
-            onChange={(e) => setStaticValue(e.target.value)}
-            className="mt-1"
-          />
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="static-null"
+              checked={staticIsNull}
+              onChange={(e) => setStaticIsNull(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="static-null" className="text-sm font-normal">
+              Set to null
+            </Label>
+          </div>
+          {!staticIsNull && (
+            <>
+              <Label htmlFor="static-value">Fixed value</Label>
+              <Input
+                id="static-value"
+                placeholder={getStaticPlaceholder(field.type)}
+                value={staticValue}
+                onChange={(e) => setStaticValue(e.target.value)}
+                className="mt-1"
+              />
+            </>
+          )}
         </div>
       )}
 

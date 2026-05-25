@@ -61,7 +61,7 @@ export const formatRuleSchema = z.object({
 
 export const staticRuleSchema = z.object({
   kind: z.literal('static'),
-  value: z.union([z.string(), z.number(), z.boolean()]),
+  value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
 })
 
 export const sequentialRuleSchema = z.object({
