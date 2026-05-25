@@ -40,9 +40,9 @@ export const GeneratorService = {
     }))
 
     const results: unknown[] = []
-    // Reset stateful strategies (sequential) and apply start values
-    configureSequentialStart(fields)
+    // Reset stateful strategies then apply start values
     resetStrategies()
+    configureSequentialStart(fields)
     // Yield to event loop every 100 records to prevent UI freeze
     const BATCH_SIZE = 100
     for (let i = 0; i < request.quantity; i++) {

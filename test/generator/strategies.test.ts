@@ -352,7 +352,6 @@ describe("SequentialStrategy", () => {
     strategy.generate(field) // 6
     strategy.generate(field) // 7
     strategy.reset()
-    strategy.setStart(5)
     expect(strategy.generate(field)).toBe(5)
   })
 

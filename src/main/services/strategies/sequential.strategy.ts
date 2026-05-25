@@ -3,6 +3,7 @@ import type { Field } from '@shared/ipc.types'
 
 export class SequentialStrategy implements GenerationStrategy {
   private counter = 0
+  private startValue = 0
 
   generate(field: Field): unknown {
     if (field.rule?.kind !== 'sequential') {
@@ -16,12 +17,11 @@ export class SequentialStrategy implements GenerationStrategy {
   }
 
   reset(): void {
-    // Reset to the start value for the next generation run.
-    // The actual start value is applied by the generator service.
-    this.counter = 0
+    this.counter = this.startValue
   }
 
   setStart(start: number): void {
+    this.startValue = start
     this.counter = start
   }
 }
