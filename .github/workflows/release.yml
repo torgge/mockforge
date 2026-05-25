@@ -51,6 +51,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Compile
+        run: npm run build
+
       - name: Package application
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
