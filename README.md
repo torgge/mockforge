@@ -20,6 +20,7 @@ MockForge is an offline desktop application built with Electron and TypeScript. 
 | Schema import | Custom Avro parser (built-in) |
 | Data generation | @faker-js/faker |
 | Packaging | electron-builder |
+| Container | Docker + noVNC |
 
 ## Documentation
 
@@ -82,6 +83,67 @@ npm test
 - **Generator engine** — Strategies (range, enum, format, default), nested field resolver
 - **Performance benchmarks** — Generation speed for 100 / 1,000 / 10,000 records
 
+## Docker
+
+MockForge can run inside a Docker container with a virtual display exposed via noVNC, making it accessible from any browser.
+
+### Prerequisites
+
+- **Docker** 20.x or later with Docker Compose plugin
+
+### Quick Start
+
+```bash
+# Build and start
+docker compose up --build -d
+
+# Open in browser
+open http://localhost:6080/vnc.html
+```
+
+### Ports
+
+| Port | Protocol | Description |
+|---|---|---|
+| 6080 | HTTP (WebSocket) | noVNC web client — access MockForge in your browser |
+| 5900 | RFB (VNC) | Raw VNC — for native VNC clients |
+
+### Volumes
+
+| Volume | Mount path | Purpose |
+|---|---|---|
+| `mockforge_data` | `/data/config` | SQLite database and user settings |
+| `mockforge_export` | `/home/mockforge/exports` | Generated JSON export files |
+
+Data persists across container restarts and recreations. To reset data:
+
+```bash
+docker compose down -v
+```
+
+### Management
+
+```bash
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+
+# Rebuild after code changes
+docker compose up --build -d
+```
+
+### Architecture
+
+The container runs a self-contained display stack:
+
+1. **Xvfb** — virtual framebuffer providing an X11 display (`:1`)
+2. **Openbox** — lightweight window manager
+3. **x11vnc** — VNC server attached to the X11 display
+4. **noVNC** — WebSocket proxy + web client (serves on port 6080)
+5. **Electron** — MockForge app with `--no-sandbox` (required for container environments)
+
 ### Project Structure
 
 ```
@@ -102,6 +164,8 @@ test/
 ├── services/          # Backend service unit tests
 ├── generator/         # Generator & strategy unit tests
 └── benchmarks/        # Performance benchmarks
+docker/
+└── entrypoint.sh      # Container startup script
 ```
 
 ## Gerando uma Release

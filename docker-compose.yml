@@ -1,0 +1,31 @@
+# =============================================================================
+# MockForge — Docker Compose
+# =============================================================================
+
+services:
+  mockforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mockforge
+    ports:
+      - "6080:6080" # noVNC web client (browser access)
+      - "5900:5900" # raw VNC (optional, for native VNC clients)
+    volumes:
+      # Persistent data — stores SQLite database and user config
+      - mockforge_data:/data/config
+      # Generated files export directory
+      - mockforge_export:/home/mockforge/exports
+    environment:
+      - VNC_RESOLUTION=1280x800
+      - VNC_DEPTH=24
+      - VNC_PORT=5900
+      - NOVNC_PORT=6080
+    restart: unless-stopped
+    shm_size: 256m # Required for Electron/Chromium
+
+volumes:
+  mockforge_data:
+    name: mockforge_data
+  mockforge_export:
+    name: mockforge_export
